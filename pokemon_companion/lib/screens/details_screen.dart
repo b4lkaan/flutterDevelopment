@@ -5,7 +5,9 @@ import '../models/pokemon.dart';
 import '../models/variant.dart';
 import 'variant_detail_screen.dart';
 
-// Inlined EvolutionChainWidget and its helper widgets (copied from your original details_screen.dart)
+// Helper function to capitalize the first letter.
+String capitalize(String s) => s.isNotEmpty ? s[0].toUpperCase() + s.substring(1) : s;
+
 String parseEvolutionMethod(String evolutionDetailsJson) {
   if (evolutionDetailsJson.isEmpty) return '';
   try {
@@ -145,7 +147,7 @@ class EvolutionStageItem extends StatelessWidget {
                     : const Icon(Icons.image_not_supported, size: 60),
                 const SizedBox(height: 4),
                 Text(
-                  evolution.speciesName,
+                  capitalize(evolution.speciesName),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
@@ -175,7 +177,6 @@ class ArrowMethodWidget extends StatelessWidget {
   }
 }
 
-// Main DetailsScreen implementation with a collapsing SliverAppBar and 2 tabs.
 class DetailsScreen extends StatefulWidget {
   final Pokemon pokemon;
 
@@ -204,7 +205,6 @@ class _DetailsScreenState extends State<DetailsScreen>
     super.dispose();
   }
 
-  // Updated Hero image without the Pokémon name overlay if no image is available.
   Widget buildHeroImage() {
     return FutureBuilder<Variant?>(
       future: DatabaseHelper.getFirstVariantForSpecies(widget.pokemon.name),
@@ -225,7 +225,6 @@ class _DetailsScreenState extends State<DetailsScreen>
             tag: 'pokemonAvatar_${widget.pokemon.id}',
             child: Container(
               color: Colors.grey[300],
-              // Removed text overlay to show a clean image area.
             ),
           );
         }
@@ -233,7 +232,6 @@ class _DetailsScreenState extends State<DetailsScreen>
     );
   }
 
-  // Build the Variants tab content.
   Widget buildVariantsTab() {
     return FutureBuilder<List<Variant>>(
       future: _variantsFuture,
@@ -266,7 +264,7 @@ class _DetailsScreenState extends State<DetailsScreen>
                         fit: BoxFit.cover,
                       )
                     : const Icon(Icons.image_not_supported),
-                title: Text(variant.name),
+                title: Text(capitalize(variant.name)),
                 subtitle: Text(
                     'HP: ${variant.hp} | ATK: ${variant.attack} | DEF: ${variant.defense}\n'
                     'Sp. ATK: ${variant.specialAttack} | Sp. DEF: ${variant.specialDefense} | Speed: ${variant.speed}'),
@@ -287,7 +285,6 @@ class _DetailsScreenState extends State<DetailsScreen>
     );
   }
 
-  // Build the Evolution tab content.
   Widget buildEvolutionTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -307,14 +304,12 @@ class _DetailsScreenState extends State<DetailsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Use a NestedScrollView with a collapsing SliverAppBar and a 2-tab TabBar.
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
             expandedHeight: 250,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              //title: Text(widget.pokemon.name),
               background: buildHeroImage(),
             ),
             bottom: TabBar(

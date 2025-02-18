@@ -24,12 +24,32 @@ class _PokemonAppState extends State<PokemonApp> {
     });
   }
   
+  final darkTheme = ThemeData(
+    brightness: Brightness.dark,
+    primaryColor: Colors.deepPurple[700],
+    colorScheme: ColorScheme.dark(
+      primary: Colors.deepPurple[700]!,
+      secondary: Colors.amber,
+      surface: const Color(0xFF1E1E1E),
+      background: const Color(0xFF121212),
+    ),
+    scaffoldBackgroundColor: const Color(0xFF121212),
+    cardColor: const Color(0xFF1E1E1E),
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.deepPurple[700],
+    ),
+    textTheme: ThemeData.dark().textTheme.apply(
+          bodyColor: Colors.white,
+          displayColor: Colors.white,
+        ),
+  );
+  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Pokémon Companion',
+      title: 'Pokevision',
       theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
+      darkTheme: darkTheme,
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: HomeScreen(
         isDarkMode: _isDarkMode,

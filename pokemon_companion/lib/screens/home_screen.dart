@@ -4,6 +4,9 @@ import '../models/pokemon.dart';
 import '../models/variant.dart';
 import 'details_screen.dart';
 
+// Helper function to capitalize the first letter.
+String capitalize(String s) => s.isNotEmpty ? s[0].toUpperCase() + s.substring(1) : s;
+
 class HomeScreen extends StatefulWidget {
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
@@ -56,9 +59,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isWideScreen = MediaQuery.of(context).size.width > 600;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pokémon Companion'),
+        // A Row with the logo and "Pokevision" text
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/final_logo.png',
+              height: 30, // Adjust as desired
+            ),
+            const SizedBox(width: 8),
+            const Text('Pokevision'),
+          ],
+        ),
         actions: [
           // Dark mode toggle switch
           Switch(
@@ -71,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // Grid of Pokémon cards
           Padding(
-            padding: const EdgeInsets.only(top: 100), // leave space for search bar
+            padding: const EdgeInsets.only(top: 100), // space for search bar
             child: filteredPokemon.isEmpty
                 ? const Center(child: CircularProgressIndicator())
                 : GridView.builder(
@@ -98,13 +112,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Card(
                           elevation: 6,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               FutureBuilder<Variant?>(
                                 future: DatabaseHelper.getFirstVariantForSpecies(
-                                    pokemon.name),
+                                  pokemon.name,
+                                ),
                                 builder: (context, snapshot) {
                                   if (snapshot.hasData &&
                                       snapshot.data != null &&
@@ -115,7 +131,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: CircleAvatar(
                                         radius: 50,
                                         backgroundImage: NetworkImage(
-                                            snapshot.data!.imageUrl!),
+                                          snapshot.data!.imageUrl!,
+                                        ),
                                         backgroundColor: Colors.grey[300],
                                       ),
                                     );
@@ -126,10 +143,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         radius: 50,
                                         backgroundColor: Colors.grey[300],
                                         child: Text(
-                                          pokemon.name[0].toUpperCase(),
+                                          capitalize(pokemon.name)[0],
                                           style: const TextStyle(
-                                              fontSize: 32,
-                                              fontWeight: FontWeight.bold),
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
                                     );
@@ -138,9 +156,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                pokemon.name,
+                                capitalize(pokemon.name),
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               Text('#${pokemon.dexNumber}'),
                             ],
@@ -164,14 +183,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   hintText: 'Search Pokémon...',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[800]
+                      : Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
-                      vertical: 12, horizontal: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
+                    vertical: 12,
+                    horizontal: 16,
                   ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
                 ),
+              ),
               ),
             ),
           ),

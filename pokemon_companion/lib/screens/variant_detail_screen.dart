@@ -5,6 +5,10 @@ import '../models/variant.dart';
 import '../models/variant_ability.dart';
 import '../models/variant_type.dart';
 
+// Helper function to capitalize the first letter.
+String capitalize(String s) =>
+    s.isNotEmpty ? s[0].toUpperCase() + s.substring(1) : s;
+
 // A helper map for type-based colors (expand as needed).
 Color _typeToColor(String typeName) {
   switch (typeName.toLowerCase()) {
@@ -49,7 +53,6 @@ Color _typeToColor(String typeName) {
   }
 }
 
-
 class VariantDetailScreen extends StatefulWidget {
   const VariantDetailScreen({super.key, required this.variant});
   final Variant variant;
@@ -75,8 +78,6 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     _primaryTypeColorFuture = _fetchPrimaryTypeColor();
   }
 
-  /// Fetches the variant's first type to color the SliverAppBar background.
-  /// Defaults to grey if no types found.
   Future<Color> _fetchPrimaryTypeColor() async {
     final types = await DatabaseHelper.getTypesForVariant(widget.variant.id);
     if (types.isNotEmpty) {
@@ -90,19 +91,16 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     return FutureBuilder<Color>(
       future: _primaryTypeColorFuture,
       builder: (context, snapshot) {
-        // Default color if not loaded yet
         final appBarColor = snapshot.data ?? Colors.grey;
 
         return Scaffold(
           body: CustomScrollView(
             slivers: [
-              // Collapsing SliverAppBar with Hero Image
               SliverAppBar(
                 pinned: true,
                 expandedHeight: 250,
                 backgroundColor: appBarColor,
                 flexibleSpace: FlexibleSpaceBar(
-                  // We omit the title here to avoid overlay text on the image
                   background: Hero(
                     tag: 'variantHero_${widget.variant.id}',
                     child: widget.variant.imageUrl != null &&
@@ -115,17 +113,16 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                   ),
                 ),
               ),
-
-              // The rest of the content is in a SliverList
               SliverList(
                 delegate: SliverChildListDelegate(
                   [
                     const SizedBox(height: 16),
                     _buildBasicStatsCard(context),
                     const SizedBox(height: 16),
-                    _buildAbilitiesSection(context),
-                    const SizedBox(height: 16),
+                    // Types section moved above abilities
                     _buildTypesSection(context),
+                    const SizedBox(height: 16),
+                    _buildAbilitiesSection(context),
                     const SizedBox(height: 16),
                     _buildCompetitiveSetsSection(context),
                     const SizedBox(height: 32),
@@ -139,7 +136,6 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Card with the variant’s name and base stats (HP, ATK, DEF, etc.).
   Widget _buildBasicStatsCard(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -164,7 +160,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.variant.name,
+                    capitalize(widget.variant.name),
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 8),
@@ -183,7 +179,6 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Shows the variant’s abilities in a modern, card-based layout.
   Widget _buildAbilitiesSection(BuildContext context) {
     return FutureBuilder<List<VariantAbility>>(
       future: _abilitiesFuture,
@@ -222,38 +217,26 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                 const SizedBox(height: 8),
                 Column(
                   children: abilities.map((ability) {
-                    return Container(
+                    return Card(
                       margin: const EdgeInsets.symmetric(vertical: 4),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade200),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: ExpansionTile(
+                        title: Text(
+                          capitalize(ability.abilityName),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
                         children: [
-                          Text(
-                            ability.abilityName,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            ability.abilityDescription,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                          Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Text(
+                              ability.abilityDescription,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
                           ),
                         ],
                       ),
@@ -268,7 +251,6 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Shows the variant’s types in a card, using color-coded chips.
   Widget _buildTypesSection(BuildContext context) {
     return FutureBuilder<List<VariantType>>(
       future: _typesFuture,
@@ -317,7 +299,6 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Shows the variant’s competitive sets in an ExpansionTile list.
   Widget _buildCompetitiveSetsSection(BuildContext context) {
     return FutureBuilder<List<CompetitiveSet>>(
       future: _competitiveSetsFuture,
@@ -337,6 +318,30 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
         }
 
         final sets = snapshot.data!;
+        // Define the desired order mapping
+        final tierOrder = {
+          'anythinggoes': 1,
+          'ubers': 2,
+          'ubersuu': 3,
+          'ou': 4,
+          'uu': 5,
+          'ru': 6,
+          'nu': 7,
+          'pu': 8,
+          'zu': 9,
+          'nfe': 10,
+          'lc': 11,
+        };
+
+        // Sort sets based on the mapping
+        sets.sort((a, b) {
+          final aTier = a.tier.toLowerCase();
+          final bTier = b.tier.toLowerCase();
+          final aOrder = tierOrder[aTier] ?? 1000;
+          final bOrder = tierOrder[bTier] ?? 1000;
+          return aOrder.compareTo(bOrder);
+        });
+
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           elevation: 4,

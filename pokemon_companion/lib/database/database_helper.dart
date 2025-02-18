@@ -121,4 +121,39 @@ class DatabaseHelper {
     );
     return results.map((map) => VariantType.fromMap(map)).toList();
   }
+
+  // In lib/database/database_helper.dart
+
+static Future<Pokemon?> getPokemonByName(String speciesName) async {
+  final db = await database;
+  // Adjust case/format if your DB stores names differently
+  final results = await db.query(
+    "Pokemon",
+    where: "name = ?",
+    whereArgs: [speciesName.toLowerCase()],
+  );
+  if (results.isNotEmpty) {
+    return Pokemon.fromMap(results.first);
+  }
+  return null;
+}
+
+// Get a single Variant (e.g. first form) for a species by name
+static Future<Variant?> getFirstVariantForSpecies(String speciesName) async {
+  final db = await database;
+  // This joins Pokemon→Variant, returning the first Variant found
+  final results = await db.rawQuery('''
+    SELECT Variant.*
+    FROM Pokemon
+    JOIN Variant ON Pokemon.id = Variant.pokemon_id
+    WHERE LOWER(Pokemon.name) = LOWER(?)
+    ORDER BY Variant.id
+    LIMIT 1
+  ''', [speciesName]);
+  if (results.isNotEmpty) {
+    return Variant.fromMap(results.first);
+  }
+  return null;
+}
+
 }

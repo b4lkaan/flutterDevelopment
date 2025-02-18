@@ -8,20 +8,47 @@ import '../models/variant_type.dart';
 // A helper map for type-based colors (expand as needed).
 Color _typeToColor(String typeName) {
   switch (typeName.toLowerCase()) {
+    case 'normal':
+      return Colors.brown.shade400;
     case 'fire':
       return Colors.redAccent;
     case 'water':
       return Colors.blueAccent;
-    case 'grass':
-      return Colors.green;
     case 'electric':
       return Colors.amber;
+    case 'grass':
+      return Colors.green;
+    case 'ice':
+      return Colors.lightBlueAccent;
+    case 'fighting':
+      return Colors.orangeAccent;
     case 'poison':
       return Colors.deepPurpleAccent;
+    case 'ground':
+      return Colors.brown;
+    case 'flying':
+      return Colors.indigoAccent;
+    case 'psychic':
+      return Colors.pinkAccent;
+    case 'bug':
+      return Colors.lightGreen;
+    case 'rock':
+      return Colors.grey;
+    case 'ghost':
+      return Colors.deepPurple;
+    case 'dragon':
+      return Colors.indigo;
+    case 'dark':
+      return Colors.black87;
+    case 'steel':
+      return Colors.blueGrey;
+    case 'fairy':
+      return Colors.pink;
     default:
       return Colors.grey;
   }
 }
+
 
 class VariantDetailScreen extends StatefulWidget {
   const VariantDetailScreen({super.key, required this.variant});
@@ -156,7 +183,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Shows the variant’s abilities in a card.
+  /// Shows the variant’s abilities in a modern, card-based layout.
   Widget _buildAbilitiesSection(BuildContext context) {
     return FutureBuilder<List<VariantAbility>>(
       future: _abilitiesFuture,
@@ -193,13 +220,46 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                       ),
                 ),
                 const SizedBox(height: 8),
-                ...abilities.map((ability) {
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(ability.abilityName),
-                    subtitle: Text(ability.abilityDescription),
-                  );
-                }).toList(),
+                Column(
+                  children: abilities.map((ability) {
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ability.abilityName,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            ability.abilityDescription,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ],
             ),
           ),

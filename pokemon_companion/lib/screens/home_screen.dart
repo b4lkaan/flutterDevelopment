@@ -5,7 +5,15 @@ import '../models/variant.dart';
 import 'details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool isDarkMode;
+  final ValueChanged<bool> onThemeChanged;
+
+  const HomeScreen({
+    super.key,
+    required this.isDarkMode,
+    required this.onThemeChanged,
+  });
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -49,7 +57,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final isWideScreen = MediaQuery.of(context).size.width > 600;
     return Scaffold(
-      // Using a Stack to create a floating search bar over the GridView.
+      appBar: AppBar(
+        title: const Text('Pokémon Companion'),
+        actions: [
+          // Dark mode toggle switch
+          Switch(
+            value: widget.isDarkMode,
+            onChanged: widget.onThemeChanged,
+          ),
+        ],
+      ),
       body: Stack(
         children: [
           // Grid of Pokémon cards
@@ -159,10 +176,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
-      ),
-      appBar: AppBar(
-        title: const Text('Pokémon Companion'),
-        // Keeping the appBar minimal since the search bar is floating
       ),
     );
   }

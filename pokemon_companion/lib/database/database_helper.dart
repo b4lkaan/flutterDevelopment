@@ -7,6 +7,9 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../models/pokemon.dart';
 import '../models/variant.dart';
 import '../models/competitive_set.dart';
+import '../models/evolution.dart';
+import '../models/variant_ability.dart';
+import '../models/variant_type.dart';
 
 class DatabaseHelper {
   static const String dbName = "pokemon.db";
@@ -64,7 +67,6 @@ class DatabaseHelper {
     return results.map((map) => Pokemon.fromMap(map)).toList();
   }
 
-  // New method to retrieve variants for a given Pokémon
   static Future<List<Variant>> getVariantsForPokemon(int pokemonId) async {
     final db = await database;
     final List<Map<String, dynamic>> results = await db.query(
@@ -74,8 +76,8 @@ class DatabaseHelper {
     );
     return results.map((map) => Variant.fromMap(map)).toList();
   }
-  
-  // New method: Retrieves competitive sets for a given variant.
+
+  // Retrieves competitive sets for a given variant.
   static Future<List<CompetitiveSet>> getCompetitiveSetsForVariant(int variantId) async {
     final db = await database;
     final List<Map<String, dynamic>> results = await db.query(
@@ -84,5 +86,39 @@ class DatabaseHelper {
       whereArgs: [variantId],
     );
     return results.map((map) => CompetitiveSet.fromMap(map)).toList();
-}
+  }
+
+  // Retrieves the evolution chain for a given Pokémon.
+  static Future<List<Evolution>> getEvolutionChain(int pokemonId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> results = await db.query(
+      "Evolution",
+      where: "pokemon_id = ?",
+      whereArgs: [pokemonId],
+      orderBy: "stage",
+    );
+    return results.map((map) => Evolution.fromMap(map)).toList();
+  }
+
+  // Retrieves abilities for a given variant.
+  static Future<List<VariantAbility>> getAbilitiesForVariant(int variantId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> results = await db.query(
+      "VariantAbility",
+      where: "variant_id = ?",
+      whereArgs: [variantId],
+    );
+    return results.map((map) => VariantAbility.fromMap(map)).toList();
+  }
+
+  // Retrieves types for a given variant.
+  static Future<List<VariantType>> getTypesForVariant(int variantId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> results = await db.query(
+      "VariantType",
+      where: "variant_id = ?",
+      whereArgs: [variantId],
+    );
+    return results.map((map) => VariantType.fromMap(map)).toList();
+  }
 }

@@ -15,7 +15,7 @@ import '../models/global_nature.dart';
 String capitalize(String s) =>
     s.isNotEmpty ? s[0].toUpperCase() + s.substring(1) : s;
 
-/// Convert a UI key (e.g. \"Weather Ball\") into DB-friendly format (\"weather-ball\").
+/// Convert a UI key (e.g. "Weather Ball") into DB-friendly format ("weather-ball").
 String _normalizeKey(String key) {
   return key.toLowerCase().replaceAll(" ", "-");
 }
@@ -26,7 +26,7 @@ bool _isBracketedList(String s) {
   return t.startsWith('[') && t.endsWith(']');
 }
 
-/// Parse a bracketed list string like \"[Protect, Knock Off]\" or '[\"Jolly\",\"Adamant\"]' 
+/// Parse a bracketed list string like "[Protect, Knock Off]" or '["Jolly","Adamant"]' 
 /// into a `List<String>`. This is a naive parser that splits on commas and trims each element.
 List<String> _parseBracketedList(String s) {
   final trimmed = s.trim();
@@ -337,8 +337,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
             Column(
               children: abilities.map((ability) {
                 // Lookup the global description if available
-                final globalAbility = _globalAbilities?[
-                    _normalizeKey(ability.abilityName)];
+                final globalAbility = _globalAbilities?[_normalizeKey(ability.abilityName)];
                 final realDescription =
                     globalAbility?.description ?? ability.abilityDescription;
 
@@ -347,26 +346,16 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: ExpansionTile(
+                  child: ListTile(
                     title: Tooltip(
                       message: realDescription,
                       child: Text(
                         capitalize(ability.abilityName),
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
                             ),
                       ),
                     ),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Text(
-                          realDescription,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                    ],
                   ),
                 );
               }).toList(),
@@ -539,10 +528,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
           const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
           Tooltip(
             message: _getMoveDescription(move),
-            child: Text(
-              move,
-              style: const TextStyle(decoration: TextDecoration.underline),
-            ),
+            child: Text(move),
           ),
         ],
       );
@@ -550,7 +536,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     return const SizedBox.shrink();
   }
 
-  /// Helper that displays multiple moves joined by \" or \" in one bullet line.
+  /// Helper that displays multiple moves joined by " or " in one bullet line.
   Widget _buildMoveRowForList(List<String> moveList) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -567,10 +553,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                 children: [
                   Tooltip(
                     message: _getMoveDescription(option),
-                    child: Text(
-                      option,
-                      style: const TextStyle(decoration: TextDecoration.underline),
-                    ),
+                    child: Text(option),
                   ),
                   if (index != moveList.length - 1) const Text(" or "),
                 ],
@@ -582,7 +565,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Build a widget that displays a `List<String>` with individual tooltips, joined by \" or \".
+  /// Build a widget that displays a `List<String>` with individual tooltips, joined by " or ".
   Widget _buildListWithTooltips(
     List<String> values,
     String Function(String) getDescription,
@@ -600,10 +583,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
           children: [
             Tooltip(
               message: getDescription(value),
-              child: Text(
-                value,
-                style: const TextStyle(decoration: TextDecoration.underline),
-              ),
+              child: Text(value),
             ),
             if (index != valid.length - 1) const Text(" or "),
           ],
@@ -612,7 +592,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Join a list of strings with \" or \".
+  /// Join a list of strings with " or ".
   String _joinWithOr(List<String> choices) {
     final valid = choices.where((c) => c.trim().isNotEmpty).toList();
     return valid.join(' or ');

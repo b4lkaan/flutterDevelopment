@@ -53,6 +53,12 @@ Color _typeToColor(String typeName) {
   }
 }
 
+// Helper functions for placeholder descriptions.
+String getMoveDescription(String move) => "Description for move: $move";
+String getItemDescription(String item) => "Description for item: $item";
+String getNatureDescription(String nature) => "Description for nature: $nature";
+String getAbilityDescription(String ability) => "Description for ability: $ability";
+
 class VariantDetailScreen extends StatefulWidget {
   const VariantDetailScreen({super.key, required this.variant});
   final Variant variant;
@@ -222,12 +228,17 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: ExpansionTile(
-                        title: Text(
-                          capitalize(ability.abilityName),
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                        title: Tooltip(
+                          message: ability.abilityDescription,
+                          child: Text(
+                            capitalize(ability.abilityName),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline),
+                          ),
                         ),
                         children: [
                           Padding(
@@ -299,7 +310,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
   }
 
   // --------------------------------------------------------------------------
-  // NEW MODERNIZED COMPETITIVE SETS SECTION
+  // NEW MODERNIZED COMPETITIVE SETS SECTION WITH HOVER TOOLTIPS
   // --------------------------------------------------------------------------
   Widget _buildCompetitiveSetsSection(BuildContext context) {
     return FutureBuilder<List<CompetitiveSet>>(
@@ -320,7 +331,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
         }
 
         final sets = snapshot.data!;
-        // Define the desired order mapping
+        // Define the desired order mapping.
         final tierOrder = {
           'anythinggoes': 1,
           'ubers': 2,
@@ -335,7 +346,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
           'lc': 11,
         };
 
-        // Sort sets based on the mapping
+        // Sort sets based on the mapping.
         sets.sort((a, b) {
           final aTier = a.tier.toLowerCase();
           final bTier = b.tier.toLowerCase();
@@ -379,7 +390,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
         title: Text('$tierStr - ${set.setName}'),
         childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
-          // Moves with bullet points and “or” for multi-choice
+          // Moves (each move is wrapped in a Tooltip, with support for multiple-choice)
           _buildLabeledSection(
             label: 'Moves',
             child: Column(
@@ -389,42 +400,42 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
           ),
           const Divider(),
 
-          // Ability (or multiple abilities) with “or”
+          // Ability with hover tooltip.
           _buildLabeledSection(
             label: 'Ability',
-            child: Text(_joinWithOr([set.ability])),
+            child: _buildListWithTooltips([set.ability], getAbilityDescription),
           ),
           const Divider(),
 
-          // Items (in case there are multiple items, you can display them with “or”)
+          // Items with hover tooltips.
           _buildLabeledSection(
             label: 'Item(s)',
-            child: Text(_joinWithOr(set.items)),
+            child: _buildListWithTooltips(set.items, getItemDescription),
           ),
           const Divider(),
 
-          // Nature(s) with “or”
+          // Nature with hover tooltip.
           _buildLabeledSection(
             label: 'Nature',
-            child: Text(_joinWithOr([set.nature])),
+            child: _buildListWithTooltips([set.nature], getNatureDescription),
           ),
           const Divider(),
 
-          // IVs (if stored as a string or map, adapt as needed)
+          // IVs.
           _buildLabeledSection(
             label: 'IVs',
             child: Text(set.ivs.toString()),
           ),
           const Divider(),
 
-          // EVs as a friendlier string
+          // EVs.
           _buildLabeledSection(
             label: 'EVs',
             child: Text(_formatEVs(set.evs)),
           ),
           const Divider(),
 
-          // Tera Types
+          // Tera Types.
           _buildLabeledSection(
             label: 'Tera Types',
             child: Text(_joinWithOr(set.teratypes)),
@@ -435,7 +446,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Builds a small section with a label and some child widget (e.g., text, list).
+  /// Builds a small section with a label and some child widget.
   Widget _buildLabeledSection({required String label, required Widget child}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -455,50 +466,74 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Builds a list of moves with bullet points.
-  /// If a single move is actually a list of moves (indicating multiple choice),
-  /// display them joined by “ or ”.
+  /// Builds a list of moves with bullet points, each wrapped in a Tooltip.
   List<Widget> _buildMoveList(List<dynamic> moves) {
-    // Example data might look like:
-    // ["Growth", "Giga Drain", "Weather Ball", ["Sludge Bomb", "Earth Power"]]
-    // Where each entry is either a String or a List<String> for multiple-choice.
     return moves.map((move) {
-      if (move is String) {
-        return _buildBulletPoint(move);
-      } else if (move is List) {
-        // multiple-choice
-        return _buildBulletPoint(move.join(' or '));
-      }
-      // fallback if data is unexpected
-      return const SizedBox.shrink();
+      return _buildMoveBullet(move);
     }).toList();
   }
 
-  /// Creates a row with a bullet point (•) and text.
-  Widget _buildBulletPoint(String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
-        Expanded(child: Text(text)),
-      ],
-    );
+  /// Creates a bullet point widget for a move.
+  Widget _buildMoveBullet(dynamic move) {
+    if (move is String) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+          Tooltip(
+            message: getMoveDescription(move),
+            child: Text(
+              move,
+              style: const TextStyle(decoration: TextDecoration.underline),
+            ),
+          ),
+        ],
+      );
+    } else if (move is List) {
+      // For multiple-choice moves, each option gets its own tooltip.
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+          Flexible(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: move.asMap().entries.map((entry) {
+                int index = entry.key;
+                String option = entry.value;
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Tooltip(
+                      message: getMoveDescription(option),
+                      child: Text(
+                        option,
+                        style:
+                            const TextStyle(decoration: TextDecoration.underline),
+                      ),
+                    ),
+                    if (index != move.length - 1)
+                      const Text(" or "),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      );
+    }
+    // Fallback if data is unexpected.
+    return const SizedBox.shrink();
   }
 
-  /// Joins a list of strings with “ or ”. Useful for items, abilities, natures, etc.
+  /// Joins a list of strings with “ or ”.
   String _joinWithOr(List<String> choices) {
-    // Remove empty or null strings just in case
     final valid = choices.where((c) => c.trim().isNotEmpty).toList();
     return valid.join(' or ');
   }
 
-  /// Converts an EV map like {def: 4, spa: 252, spe: 252} to a string like
-  /// "4 DEF / 252 SPA / 252 SPE".
+  /// Converts an EV map like {def: 4, spa: 252, spe: 252} to a friendly string.
   String _formatEVs(dynamic evData) {
-    // If your CompetitiveSet.evs is already a Map<String, int>, cast it:
-    // final evMap = evData as Map<String, int>;
-    // If it’s a string like "{def: 4, spa: 252, spe: 252}", you might need to parse it.
-    // Here we assume it’s a Map<String, int> in memory or adapt as needed.
     if (evData is Map) {
       final entries = evData.entries
           .where((e) => e.value != null && e.value > 0)
@@ -506,7 +541,31 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
           .toList();
       return entries.isEmpty ? '—' : entries.join(' / ');
     }
-    // Fallback if not a map
     return evData.toString();
+  }
+
+  /// Builds a widget that displays a list of strings with individual tooltips.
+  Widget _buildListWithTooltips(
+      List<String> values, String Function(String) getDescription) {
+    final valid = values.where((v) => v.trim().isNotEmpty).toList();
+    return Wrap(
+      children: valid.asMap().entries.map((entry) {
+        int index = entry.key;
+        String value = entry.value;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Tooltip(
+              message: getDescription(value),
+              child: Text(
+                value,
+                style: const TextStyle(decoration: TextDecoration.underline),
+              ),
+            ),
+            if (index != valid.length - 1) const Text(" or "),
+          ],
+        );
+      }).toList(),
+    );
   }
 }

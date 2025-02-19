@@ -394,7 +394,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                       const SizedBox(height: 8),
                     ],
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),

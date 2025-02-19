@@ -31,7 +31,6 @@ class _PokemonAppState extends State<PokemonApp> {
       primary: Colors.deepPurple[700]!,
       secondary: Colors.amber,
       surface: const Color(0xFF1E1E1E),
-      background: const Color(0xFF121212),
     ),
     scaffoldBackgroundColor: const Color(0xFF121212),
     cardColor: const Color(0xFF1E1E1E),

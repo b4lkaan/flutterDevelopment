@@ -67,8 +67,7 @@ String parseEvolutionMethod(String evolutionDetailsJson) {
 class EvolutionChainWidget extends StatelessWidget {
   final int pokemonId;
 
-  const EvolutionChainWidget({Key? key, required this.pokemonId})
-      : super(key: key);
+  const EvolutionChainWidget({super.key, required this.pokemonId});
 
   @override
   Widget build(BuildContext context) {
@@ -109,8 +108,7 @@ class EvolutionChainWidget extends StatelessWidget {
 class EvolutionStageItem extends StatelessWidget {
   final dynamic evolution; // adjust the type if you have a specific model
 
-  const EvolutionStageItem({Key? key, required this.evolution})
-      : super(key: key);
+  const EvolutionStageItem({super.key, required this.evolution});
 
   @override
   Widget build(BuildContext context) {
@@ -162,8 +160,7 @@ class EvolutionStageItem extends StatelessWidget {
 class ArrowMethodWidget extends StatelessWidget {
   final String methodText;
 
-  const ArrowMethodWidget({Key? key, required this.methodText})
-      : super(key: key);
+  const ArrowMethodWidget({super.key, required this.methodText});
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +177,7 @@ class ArrowMethodWidget extends StatelessWidget {
 class DetailsScreen extends StatefulWidget {
   final Pokemon pokemon;
 
-  const DetailsScreen({Key? key, required this.pokemon}) : super(key: key);
+  const DetailsScreen({super.key, required this.pokemon});
 
   @override
   State<DetailsScreen> createState() => _DetailsScreenState();

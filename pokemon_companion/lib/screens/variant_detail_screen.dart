@@ -5,11 +5,64 @@ import '../models/variant.dart';
 import '../models/variant_ability.dart';
 import '../models/variant_type.dart';
 
-// Helper function to capitalize the first letter.
+// Global model classes:
+import '../models/global_move.dart';
+import '../models/global_ability.dart';
+import '../models/global_item.dart';
+import '../models/global_nature.dart';
+
+/// Capitalize the first letter of a string.
 String capitalize(String s) =>
     s.isNotEmpty ? s[0].toUpperCase() + s.substring(1) : s;
 
-// A helper map for type-based colors (expand as needed).
+/// Convert a UI key (e.g. \"Weather Ball\") into DB-friendly format (\"weather-ball\").
+String _normalizeKey(String key) {
+  return key.toLowerCase().replaceAll(" ", "-");
+}
+
+/// Check if a string is enclosed in `[ ]`.
+bool _isBracketedList(String s) {
+  final t = s.trim();
+  return t.startsWith('[') && t.endsWith(']');
+}
+
+/// Parse a bracketed list string like \"[Protect, Knock Off]\" or '[\"Jolly\",\"Adamant\"]' 
+/// into a `List<String>`. This is a naive parser that splits on commas and trims each element.
+List<String> _parseBracketedList(String s) {
+  final trimmed = s.trim();
+  // Remove the leading '[' and trailing ']'
+  final inner = trimmed.substring(1, trimmed.length - 1).trim();
+  if (inner.isEmpty) return [];
+  return inner.split(',').map((part) {
+    // Strip quotes if present
+    return part.replaceAll('"', '').replaceAll("'", '').trim();
+  }).toList();
+}
+
+/// A helper that ensures we always return a `List<String>` even if the underlying
+/// data is bracketed, a single string, or already a list of dynamic.
+List<String> _extractListFromDynamic(dynamic data) {
+  if (data == null) return [];
+
+  // If it's already a List, convert each element to a String.
+  if (data is List) {
+    return data.map((e) => e.toString()).toList();
+  }
+
+  // If it's a string, parse if bracketed, otherwise treat as single-value list.
+  if (data is String) {
+    final trimmed = data.trim();
+    if (_isBracketedList(trimmed)) {
+      return _parseBracketedList(trimmed);
+    }
+    return [trimmed];
+  }
+
+  // Fallback: return empty list if type is unexpected
+  return [];
+}
+
+/// Convert a Pokémon type name to a color (expand as needed).
 Color _typeToColor(String typeName) {
   switch (typeName.toLowerCase()) {
     case 'normal':
@@ -53,12 +106,6 @@ Color _typeToColor(String typeName) {
   }
 }
 
-// Helper functions for placeholder descriptions.
-String getMoveDescription(String move) => "Description for move: $move";
-String getItemDescription(String item) => "Description for item: $item";
-String getNatureDescription(String nature) => "Description for nature: $nature";
-String getAbilityDescription(String ability) => "Description for ability: $ability";
-
 class VariantDetailScreen extends StatefulWidget {
   const VariantDetailScreen({super.key, required this.variant});
   final Variant variant;
@@ -68,20 +115,39 @@ class VariantDetailScreen extends StatefulWidget {
 }
 
 class _VariantDetailScreenState extends State<VariantDetailScreen> {
+  // Variant-specific data futures
   late Future<List<VariantAbility>> _abilitiesFuture;
   late Future<List<VariantType>> _typesFuture;
   late Future<List<CompetitiveSet>> _competitiveSetsFuture;
   late Future<Color> _primaryTypeColorFuture;
 
+  // Global data futures
+  Future<Map<String, GlobalMove>> _globalMovesFuture = Future.value({});
+  Future<Map<String, GlobalAbility>> _globalAbilitiesFuture = Future.value({});
+  Future<Map<String, GlobalItem>> _globalItemsFuture = Future.value({});
+  Future<Map<String, GlobalNature>> _globalNaturesFuture = Future.value({});
+
+  // Once loaded, store them here
+  Map<String, GlobalMove>? _globalMoves;
+  Map<String, GlobalAbility>? _globalAbilities;
+  Map<String, GlobalItem>? _globalItems;
+  Map<String, GlobalNature>? _globalNatures;
+
   @override
   void initState() {
     super.initState();
-    _abilitiesFuture =
-        DatabaseHelper.getAbilitiesForVariant(widget.variant.id);
+    // Load variant-specific data
+    _abilitiesFuture = DatabaseHelper.getAbilitiesForVariant(widget.variant.id);
     _typesFuture = DatabaseHelper.getTypesForVariant(widget.variant.id);
     _competitiveSetsFuture =
         DatabaseHelper.getCompetitiveSetsForVariant(widget.variant.id);
     _primaryTypeColorFuture = _fetchPrimaryTypeColor();
+
+    // Load global data
+    _globalMovesFuture = DatabaseHelper.getAllGlobalMoves();
+    _globalAbilitiesFuture = DatabaseHelper.getAllGlobalAbilities();
+    _globalItemsFuture = DatabaseHelper.getAllGlobalItems();
+    _globalNaturesFuture = DatabaseHelper.getAllGlobalNatures();
   }
 
   Future<Color> _fetchPrimaryTypeColor() async {
@@ -94,10 +160,37 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Color>(
-      future: _primaryTypeColorFuture,
-      builder: (context, snapshot) {
-        final appBarColor = snapshot.data ?? Colors.grey;
+    return FutureBuilder(
+      future: Future.wait([
+        _primaryTypeColorFuture,
+        _abilitiesFuture,
+        _typesFuture,
+        _competitiveSetsFuture,
+        _globalMovesFuture,
+        _globalAbilitiesFuture,
+        _globalItemsFuture,
+        _globalNaturesFuture,
+      ]),
+      builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(child: Text('Error: ${snapshot.error}')),
+          );
+        }
+        // Unpack the results
+        final color = snapshot.data![0] as Color;
+        final abilities = snapshot.data![1] as List<VariantAbility>;
+        final types = snapshot.data![2] as List<VariantType>;
+        final compSets = snapshot.data![3] as List<CompetitiveSet>;
+        _globalMoves = snapshot.data![4] as Map<String, GlobalMove>;
+        _globalAbilities = snapshot.data![5] as Map<String, GlobalAbility>;
+        _globalItems = snapshot.data![6] as Map<String, GlobalItem>;
+        _globalNatures = snapshot.data![7] as Map<String, GlobalNature>;
 
         return Scaffold(
           body: CustomScrollView(
@@ -105,7 +198,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
               SliverAppBar(
                 pinned: true,
                 expandedHeight: 250,
-                backgroundColor: appBarColor,
+                backgroundColor: color,
                 flexibleSpace: FlexibleSpaceBar(
                   background: Hero(
                     tag: 'variantHero_${widget.variant.id}',
@@ -125,11 +218,11 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                     const SizedBox(height: 16),
                     _buildBasicStatsCard(context),
                     const SizedBox(height: 16),
-                    _buildTypesSection(context),
+                    _buildTypesSection(types),
                     const SizedBox(height: 16),
-                    _buildAbilitiesSection(context),
+                    _buildAbilitiesSection(abilities),
                     const SizedBox(height: 16),
-                    _buildCompetitiveSetsSection(context),
+                    _buildCompetitiveSetsSection(compSets),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -184,203 +277,161 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  Widget _buildAbilitiesSection(BuildContext context) {
-    return FutureBuilder<List<VariantAbility>>(
-      future: _abilitiesFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text('Error: ${snapshot.error}'),
-          );
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('No abilities found.'),
-          );
-        }
-
-        final abilities = snapshot.data!;
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Abilities',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+  Widget _buildTypesSection(List<VariantType> types) {
+    if (types.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Text('No types found.'),
+      );
+    }
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Wrap(
+          spacing: 8,
+          children: types.map((type) {
+            final chipColor = _typeToColor(type.typeName);
+            return Chip(
+              backgroundColor: chipColor.withAlpha(51),
+              label: Text(
+                type.typeName,
+                style: TextStyle(
+                  color: chipColor,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 8),
-                Column(
-                  children: abilities.map((ability) {
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ExpansionTile(
-                        title: Tooltip(
-                          message: ability.abilityDescription,
-                          child: Text(
-                            capitalize(ability.abilityName),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    decoration: TextDecoration.underline),
-                          ),
-                        ),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Text(
-                              ability.abilityDescription,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+              ),
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 
-  Widget _buildTypesSection(BuildContext context) {
-    return FutureBuilder<List<VariantType>>(
-      future: _typesFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text('Error: ${snapshot.error}'),
-          );
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('No types found.'),
-          );
-        }
+  Widget _buildAbilitiesSection(List<VariantAbility> abilities) {
+    if (abilities.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Text('No abilities found.'),
+      );
+    }
 
-        final types = snapshot.data!;
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Wrap(
-              spacing: 8,
-              children: types.map((type) {
-                final color = _typeToColor(type.typeName);
-                return Chip(
-                  backgroundColor: color.withAlpha(51),
-                  label: Text(
-                    type.typeName,
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.bold,
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Abilities',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Column(
+              children: abilities.map((ability) {
+                // Lookup the global description if available
+                final globalAbility = _globalAbilities?[
+                    _normalizeKey(ability.abilityName)];
+                final realDescription =
+                    globalAbility?.description ?? ability.abilityDescription;
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ExpansionTile(
+                    title: Tooltip(
+                      message: realDescription,
+                      child: Text(
+                        capitalize(ability.abilityName),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                      ),
                     ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Text(
+                          realDescription,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }).toList(),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 
-  // --------------------------------------------------------------------------
-  // NEW MODERNIZED COMPETITIVE SETS SECTION WITH HOVER TOOLTIPS
-  // --------------------------------------------------------------------------
-  Widget _buildCompetitiveSetsSection(BuildContext context) {
-    return FutureBuilder<List<CompetitiveSet>>(
-      future: _competitiveSetsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text('Error: ${snapshot.error}'),
-          );
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('No competitive sets found.'),
-          );
-        }
+  Widget _buildCompetitiveSetsSection(List<CompetitiveSet> sets) {
+    if (sets.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Text('No competitive sets found.'),
+      );
+    }
 
-        final sets = snapshot.data!;
-        // Define the desired order mapping.
-        final tierOrder = {
-          'anythinggoes': 1,
-          'ubers': 2,
-          'ubersuu': 3,
-          'ou': 4,
-          'uu': 5,
-          'ru': 6,
-          'nu': 7,
-          'pu': 8,
-          'zu': 9,
-          'nfe': 10,
-          'lc': 11,
-        };
+    // Define a custom tier sort order
+    final tierOrder = {
+      'anythinggoes': 1,
+      'ubers': 2,
+      'ubersuu': 3,
+      'ou': 4,
+      'uu': 5,
+      'ru': 6,
+      'nu': 7,
+      'pu': 8,
+      'zu': 9,
+      'nfe': 10,
+      'lc': 11,
+    };
 
-        // Sort sets based on the mapping.
-        sets.sort((a, b) {
-          final aTier = a.tier.toLowerCase();
-          final bTier = b.tier.toLowerCase();
-          final aOrder = tierOrder[aTier] ?? 1000;
-          final bOrder = tierOrder[bTier] ?? 1000;
-          return aOrder.compareTo(bOrder);
-        });
+    // Sort sets based on the mapping
+    sets.sort((a, b) {
+      final aTier = a.tier.toLowerCase();
+      final bTier = b.tier.toLowerCase();
+      final aOrder = tierOrder[aTier] ?? 1000;
+      final bOrder = tierOrder[bTier] ?? 1000;
+      return aOrder.compareTo(bOrder);
+    });
 
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                Text(
-                  'Competitive Sets',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                ...sets.map((set) => _buildCompetitiveSetTile(context, set)),
-              ],
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            Text(
+              'Competitive Sets',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 8),
+            ...sets.map((set) => _buildCompetitiveSetTile(set)),
+          ],
+        ),
+      ),
     );
   }
 
-  /// A helper widget that displays one CompetitiveSet in a nicely formatted way.
-  Widget _buildCompetitiveSetTile(BuildContext context, CompetitiveSet set) {
+  Widget _buildCompetitiveSetTile(CompetitiveSet set) {
     final tierStr = set.tier.toUpperCase();
 
     return Card(
@@ -390,7 +441,6 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
         title: Text('$tierStr - ${set.setName}'),
         childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
-          // Moves (each move is wrapped in a Tooltip, with support for multiple-choice)
           _buildLabeledSection(
             label: 'Moves',
             child: Column(
@@ -399,43 +449,40 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
             ),
           ),
           const Divider(),
-
-          // Ability with hover tooltip.
           _buildLabeledSection(
             label: 'Ability',
-            child: _buildListWithTooltips([set.ability], getAbilityDescription),
+            child: _buildListWithTooltips(
+              _extractListFromDynamic(set.ability),
+              (abilityName) => _getAbilityDescription(abilityName),
+            ),
           ),
           const Divider(),
-
-          // Items with hover tooltips.
           _buildLabeledSection(
             label: 'Item(s)',
-            child: _buildListWithTooltips(set.items, getItemDescription),
+            child: _buildListWithTooltips(
+              _extractListFromDynamic(set.items),
+              (itemName) => _getItemDescription(itemName),
+            ),
           ),
           const Divider(),
-
-          // Nature with hover tooltip.
           _buildLabeledSection(
             label: 'Nature',
-            child: _buildListWithTooltips([set.nature], getNatureDescription),
+            child: _buildListWithTooltips(
+              _extractListFromDynamic(set.nature),
+              (natureName) => _getNatureDescription(natureName),
+            ),
           ),
           const Divider(),
-
-          // IVs.
           _buildLabeledSection(
             label: 'IVs',
             child: Text(set.ivs.toString()),
           ),
           const Divider(),
-
-          // EVs.
           _buildLabeledSection(
             label: 'EVs',
             child: Text(_formatEVs(set.evs)),
           ),
           const Divider(),
-
-          // Tera Types.
           _buildLabeledSection(
             label: 'Tera Types',
             child: Text(_joinWithOr(set.teratypes)),
@@ -446,7 +493,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Builds a small section with a label and some child widget.
+  /// Helper method that displays a label next to some child widget (used in expansions).
   Widget _buildLabeledSection({required String label, required Widget child}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -466,22 +513,32 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
-  /// Builds a list of moves with bullet points, each wrapped in a Tooltip.
+  /// Build a list of moves with bullet points. Each element can be a single move or a bracketed list of moves.
   List<Widget> _buildMoveList(List<dynamic> moves) {
     return moves.map((move) {
       return _buildMoveBullet(move);
     }).toList();
   }
 
-  /// Creates a bullet point widget for a move.
+  /// Display a single move or multi-move with bullet points.
   Widget _buildMoveBullet(dynamic move) {
-    if (move is String) {
+    if (move is List) {
+      // Already a list of moves
+      return _buildMoveRowForList(move.map((e) => e.toString()).toList());
+    } else if (move is String) {
+      // Possibly bracketed
+      final trimmed = move.trim();
+      if (_isBracketedList(trimmed)) {
+        final parsed = _parseBracketedList(trimmed);
+        return _buildMoveRowForList(parsed);
+      }
+      // Single move
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
           Tooltip(
-            message: getMoveDescription(move),
+            message: _getMoveDescription(move),
             child: Text(
               move,
               style: const TextStyle(decoration: TextDecoration.underline),
@@ -489,69 +546,55 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
           ),
         ],
       );
-    } else if (move is List) {
-      // For multiple-choice moves, each option gets its own tooltip.
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
-          Flexible(
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: move.asMap().entries.map((entry) {
-                int index = entry.key;
-                String option = entry.value;
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Tooltip(
-                      message: getMoveDescription(option),
-                      child: Text(
-                        option,
-                        style:
-                            const TextStyle(decoration: TextDecoration.underline),
-                      ),
-                    ),
-                    if (index != move.length - 1)
-                      const Text(" or "),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      );
     }
-    // Fallback if data is unexpected.
     return const SizedBox.shrink();
   }
 
-  /// Joins a list of strings with “ or ”.
-  String _joinWithOr(List<String> choices) {
-    final valid = choices.where((c) => c.trim().isNotEmpty).toList();
-    return valid.join(' or ');
+  /// Helper that displays multiple moves joined by \" or \" in one bullet line.
+  Widget _buildMoveRowForList(List<String> moveList) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+        Flexible(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: moveList.asMap().entries.map((entry) {
+              final index = entry.key;
+              final option = entry.value;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Tooltip(
+                    message: _getMoveDescription(option),
+                    child: Text(
+                      option,
+                      style: const TextStyle(decoration: TextDecoration.underline),
+                    ),
+                  ),
+                  if (index != moveList.length - 1) const Text(" or "),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
   }
 
-  /// Converts an EV map like {def: 4, spa: 252, spe: 252} to a friendly string.
-  String _formatEVs(dynamic evData) {
-    if (evData is Map) {
-      final entries = evData.entries
-          .where((e) => e.value != null && e.value > 0)
-          .map((e) => '${e.value} ${e.key.toString().toUpperCase()}')
-          .toList();
-      return entries.isEmpty ? '—' : entries.join(' / ');
-    }
-    return evData.toString();
-  }
-
-  /// Builds a widget that displays a list of strings with individual tooltips.
+  /// Build a widget that displays a `List<String>` with individual tooltips, joined by \" or \".
   Widget _buildListWithTooltips(
-      List<String> values, String Function(String) getDescription) {
+    List<String> values,
+    String Function(String) getDescription,
+  ) {
     final valid = values.where((v) => v.trim().isNotEmpty).toList();
+    if (valid.isEmpty) {
+      return const Text('—');
+    }
     return Wrap(
       children: valid.asMap().entries.map((entry) {
-        int index = entry.key;
-        String value = entry.value;
+        final index = entry.key;
+        final value = entry.value;
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -567,5 +610,67 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
         );
       }).toList(),
     );
+  }
+
+  /// Join a list of strings with \" or \".
+  String _joinWithOr(List<String> choices) {
+    final valid = choices.where((c) => c.trim().isNotEmpty).toList();
+    return valid.join(' or ');
+  }
+
+  /// Convert an EV map (e.g. {def: 4, spa: 252, spe: 252}) to a readable string.
+  String _formatEVs(dynamic evData) {
+    if (evData is Map) {
+      final entries = evData.entries
+          .where((e) => e.value != null && e.value > 0)
+          .map((e) => '${e.value} ${e.key.toString().toUpperCase()}')
+          .toList();
+      return entries.isEmpty ? '—' : entries.join(' / ');
+    }
+    return evData.toString();
+  }
+
+  /// Look up a move description in the global map.
+  String _getMoveDescription(String moveName) {
+    if (_globalMoves == null) return moveName;
+    final normalizedName = _normalizeKey(moveName);
+    final globalMove = _globalMoves![normalizedName];
+    if (globalMove == null) {
+      return "No move description found for $moveName";
+    }
+    return globalMove.description;
+  }
+
+  /// Look up an ability description in the global map.
+  String _getAbilityDescription(String abilityName) {
+    if (_globalAbilities == null) return abilityName;
+    final normalizedName = _normalizeKey(abilityName);
+    final globalAbility = _globalAbilities![normalizedName];
+    if (globalAbility == null) {
+      return "No ability description found for $abilityName";
+    }
+    return globalAbility.description;
+  }
+
+  /// Look up an item description in the global map.
+  String _getItemDescription(String itemName) {
+    if (_globalItems == null) return itemName;
+    final normalizedName = _normalizeKey(itemName);
+    final globalItem = _globalItems![normalizedName];
+    if (globalItem == null) {
+      return "No item description found for $itemName";
+    }
+    return globalItem.description;
+  }
+
+  /// Look up a nature description in the global map.
+  String _getNatureDescription(String natureName) {
+    if (_globalNatures == null) return natureName;
+    final normalizedName = _normalizeKey(natureName);
+    final globalNature = _globalNatures![normalizedName];
+    if (globalNature == null) {
+      return "No nature data found for $natureName";
+    }
+    return globalNature.description;
   }
 }

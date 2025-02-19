@@ -9,6 +9,10 @@ import '../models/competitive_set.dart';
 import '../models/evolution.dart';
 import '../models/variant_ability.dart';
 import '../models/variant_type.dart';
+import '../models/global_ability.dart';
+import '../models/global_item.dart';
+import '../models/global_move.dart';
+import '../models/global_nature.dart';
 
 class DatabaseHelper {
   static const String dbName = "pokemon.db";
@@ -132,6 +136,54 @@ class DatabaseHelper {
     }
     return null;
   }
+
+  // Fetch all moves from GlobalMove, store them in a map { moveNameLowercased: GlobalMove }
+static Future<Map<String, GlobalMove>> getAllGlobalMoves() async {
+  final db = await database;
+  final results = await db.query('GlobalMove');
+  final moveMap = <String, GlobalMove>{};
+  for (final row in results) {
+    final move = GlobalMove.fromMap(row);
+    moveMap[move.name.toLowerCase()] = move;
+  }
+  return moveMap;
+}
+
+// Fetch all abilities from GlobalAbility
+static Future<Map<String, GlobalAbility>> getAllGlobalAbilities() async {
+  final db = await database;
+  final results = await db.query('GlobalAbility');
+  final abilityMap = <String, GlobalAbility>{};
+  for (final row in results) {
+    final ability = GlobalAbility.fromMap(row);
+    abilityMap[ability.name.toLowerCase()] = ability;
+  }
+  return abilityMap;
+}
+
+// Fetch all items from GlobalItem
+static Future<Map<String, GlobalItem>> getAllGlobalItems() async {
+  final db = await database;
+  final results = await db.query('GlobalItem');
+  final itemMap = <String, GlobalItem>{};
+  for (final row in results) {
+    final item = GlobalItem.fromMap(row);
+    itemMap[item.name.toLowerCase()] = item;
+  }
+  return itemMap;
+}
+
+// Fetch all natures from GlobalNature
+static Future<Map<String, GlobalNature>> getAllGlobalNatures() async {
+  final db = await database;
+  final results = await db.query('GlobalNature');
+  final natureMap = <String, GlobalNature>{};
+  for (final row in results) {
+    final nature = GlobalNature.fromMap(row);
+    natureMap[nature.name.toLowerCase()] = nature;
+  }
+  return natureMap;
+}
   
   // Get a single Variant (e.g. first form) for a species by name.
   static Future<Variant?> getFirstVariantForSpecies(String speciesName) async {

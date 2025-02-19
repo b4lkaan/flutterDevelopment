@@ -119,7 +119,6 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                     const SizedBox(height: 16),
                     _buildBasicStatsCard(context),
                     const SizedBox(height: 16),
-                    // Types section moved above abilities
                     _buildTypesSection(context),
                     const SizedBox(height: 16),
                     _buildAbilitiesSection(context),
@@ -299,6 +298,9 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
     );
   }
 
+  // --------------------------------------------------------------------------
+  // NEW MODERNIZED COMPETITIVE SETS SECTION
+  // --------------------------------------------------------------------------
   Widget _buildCompetitiveSetsSection(BuildContext context) {
     return FutureBuilder<List<CompetitiveSet>>(
       future: _competitiveSetsFuture,
@@ -345,8 +347,7 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
@@ -358,48 +359,154 @@ class _VariantDetailScreenState extends State<VariantDetailScreen> {
                       ),
                 ),
                 const SizedBox(height: 8),
-                ...sets.map((set) {
-                  final tierStr = set.tier.toString();
-                  return ExpansionTile(
-                    title: Text('${tierStr.toUpperCase()} - ${set.setName}'),
-                    children: [
-                      ListTile(
-                        title: const Text('Moves'),
-                        subtitle: Text(set.moves.join(', ')),
-                      ),
-                      ListTile(
-                        title: const Text('Ability'),
-                        subtitle: Text(set.ability),
-                      ),
-                      ListTile(
-                        title: const Text('Items'),
-                        subtitle: Text(set.items.join(', ')),
-                      ),
-                      ListTile(
-                        title: const Text('Nature'),
-                        subtitle: Text(set.nature),
-                      ),
-                      ListTile(
-                        title: const Text('IVs'),
-                        subtitle: Text(set.ivs.toString()),
-                      ),
-                      ListTile(
-                        title: const Text('EVs'),
-                        subtitle: Text(set.evs.toString()),
-                      ),
-                      ListTile(
-                        title: const Text('Tera Types'),
-                        subtitle: Text(set.teratypes.join(', ')),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                  );
-                }),
+                ...sets.map((set) => _buildCompetitiveSetTile(context, set)),
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  /// A helper widget that displays one CompetitiveSet in a nicely formatted way.
+  Widget _buildCompetitiveSetTile(BuildContext context, CompetitiveSet set) {
+    final tierStr = set.tier.toUpperCase();
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ExpansionTile(
+        title: Text('$tierStr - ${set.setName}'),
+        childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        children: [
+          // Moves with bullet points and “or” for multi-choice
+          _buildLabeledSection(
+            label: 'Moves',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _buildMoveList(set.moves),
+            ),
+          ),
+          const Divider(),
+
+          // Ability (or multiple abilities) with “or”
+          _buildLabeledSection(
+            label: 'Ability',
+            child: Text(_joinWithOr([set.ability])),
+          ),
+          const Divider(),
+
+          // Items (in case there are multiple items, you can display them with “or”)
+          _buildLabeledSection(
+            label: 'Item(s)',
+            child: Text(_joinWithOr(set.items)),
+          ),
+          const Divider(),
+
+          // Nature(s) with “or”
+          _buildLabeledSection(
+            label: 'Nature',
+            child: Text(_joinWithOr([set.nature])),
+          ),
+          const Divider(),
+
+          // IVs (if stored as a string or map, adapt as needed)
+          _buildLabeledSection(
+            label: 'IVs',
+            child: Text(set.ivs.toString()),
+          ),
+          const Divider(),
+
+          // EVs as a friendlier string
+          _buildLabeledSection(
+            label: 'EVs',
+            child: Text(_formatEVs(set.evs)),
+          ),
+          const Divider(),
+
+          // Tera Types
+          _buildLabeledSection(
+            label: 'Tera Types',
+            child: Text(_joinWithOr(set.teratypes)),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  /// Builds a small section with a label and some child widget (e.g., text, list).
+  Widget _buildLabeledSection({required String label, required Widget child}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+
+  /// Builds a list of moves with bullet points.
+  /// If a single move is actually a list of moves (indicating multiple choice),
+  /// display them joined by “ or ”.
+  List<Widget> _buildMoveList(List<dynamic> moves) {
+    // Example data might look like:
+    // ["Growth", "Giga Drain", "Weather Ball", ["Sludge Bomb", "Earth Power"]]
+    // Where each entry is either a String or a List<String> for multiple-choice.
+    return moves.map((move) {
+      if (move is String) {
+        return _buildBulletPoint(move);
+      } else if (move is List) {
+        // multiple-choice
+        return _buildBulletPoint(move.join(' or '));
+      }
+      // fallback if data is unexpected
+      return const SizedBox.shrink();
+    }).toList();
+  }
+
+  /// Creates a row with a bullet point (•) and text.
+  Widget _buildBulletPoint(String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+        Expanded(child: Text(text)),
+      ],
+    );
+  }
+
+  /// Joins a list of strings with “ or ”. Useful for items, abilities, natures, etc.
+  String _joinWithOr(List<String> choices) {
+    // Remove empty or null strings just in case
+    final valid = choices.where((c) => c.trim().isNotEmpty).toList();
+    return valid.join(' or ');
+  }
+
+  /// Converts an EV map like {def: 4, spa: 252, spe: 252} to a string like
+  /// "4 DEF / 252 SPA / 252 SPE".
+  String _formatEVs(dynamic evData) {
+    // If your CompetitiveSet.evs is already a Map<String, int>, cast it:
+    // final evMap = evData as Map<String, int>;
+    // If it’s a string like "{def: 4, spa: 252, spe: 252}", you might need to parse it.
+    // Here we assume it’s a Map<String, int> in memory or adapt as needed.
+    if (evData is Map) {
+      final entries = evData.entries
+          .where((e) => e.value != null && e.value > 0)
+          .map((e) => '${e.value} ${e.key.toString().toUpperCase()}')
+          .toList();
+      return entries.isEmpty ? '—' : entries.join(' / ');
+    }
+    // Fallback if not a map
+    return evData.toString();
   }
 }

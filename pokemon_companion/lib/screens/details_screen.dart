@@ -83,22 +83,55 @@ class EvolutionChainWidget extends StatelessWidget {
         }
         final evolutions = snapshot.data!;
         evolutions.sort((a, b) => a.stage.compareTo(b.stage));
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: List.generate(evolutions.length * 2 - 1, (index) {
-              final isStageIndex = index % 2 == 0;
-              if (isStageIndex) {
-                final evoIndex = index ~/ 2;
-                return EvolutionStageItem(evolution: evolutions[evoIndex]);
-              } else {
-                final nextIndex = (index ~/ 2) + 1;
-                final methodJson = evolutions[nextIndex].evolutionDetails;
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            // Use vertical layout if available width is less than 400 (adjust threshold as needed)
+            bool useVertical = constraints.maxWidth < 500;
+            List<Widget> items = [];
+
+            for (int i = 0; i < evolutions.length; i++) {
+              items.add(EvolutionStageItem(evolution: evolutions[i]));
+              if (i < evolutions.length - 1) {
+                final methodJson = evolutions[i + 1].evolutionDetails;
                 final methodText = parseEvolutionMethod(methodJson);
-                return ArrowMethodWidget(methodText: methodText);
+                items.add(
+                  useVertical
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.arrow_drop_down, size: 30),
+                            Text(methodText),
+                            const SizedBox(height: 8),
+                          ],
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.arrow_right_alt, size: 30),
+                            Text(methodText),
+                            const SizedBox(width: 8),
+                          ],
+                        ),
+                );
               }
-            }),
-          ),
+            }
+            return useVertical
+                ? SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: items,
+                    ),
+                  )
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: items,
+                    ),
+                  );
+          },
         );
       },
     );
@@ -157,6 +190,7 @@ class EvolutionStageItem extends StatelessWidget {
   }
 }
 
+// Optionally, you can keep this widget for horizontal displays if needed.
 class ArrowMethodWidget extends StatelessWidget {
   final String methodText;
 
